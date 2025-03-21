@@ -4,7 +4,7 @@ Michael Adams, unquietwiki.com, 2025-03-20
 ]#
 
 # Libraries
-import std/[os, parseopt, strformat, strutils, terminal]
+import std/[os, parseopt, strformat, strutils]
 
 # Config import (it's just variables)
 include config
@@ -33,7 +33,7 @@ proc writeVersion() =
 
 proc writeHelp() =
   writeVersion()
-  echo("Usage: sortplz -f:[fromdir] -t:[todir] -e:[ext] -n:[name]")
+  echo("Usage: TBD")
   echo("Other flags: --help (-h), --version (-v)")
   echo("==============================================================")
 
@@ -48,7 +48,6 @@ for kind, key, val in getopt():
     of "version", "v":
       writeVersion()
       quit(0)
-    # Handle file extensions as command line arguments
   of cmdArgument:
     exts.add(key)
   of cmdEnd:

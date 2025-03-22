@@ -9,8 +9,8 @@ _pingh_ checks the system for specific conditions, and reports back to an HTTP e
 ## Changelog
 
 - 2025.03.21.1 -> Initial Release
+- 2025.03.22.1 -> Added test for running process
 
 ## TODO
 
-- Test against local services and/or ports, and indicate if they're working or not.
 - Example systemd script for Linux use.

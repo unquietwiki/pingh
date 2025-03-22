@@ -1,10 +1,10 @@
 #[
 pingh: periodically return status of host as a HTTP response.
-Michael Adams, unquietwiki.com, 2025-03-21
+Michael Adams, unquietwiki.com, 2025.03.22.1
 ]#
 
 # Libraries
-import std/[asyncdispatch, httpclient, parseopt, strutils, times, uri]
+import std/[asyncdispatch, httpclient, osproc, parseopt, strutils, uri]
 
 # Config import (it's just variables)
 include config
@@ -20,6 +20,34 @@ const
 var
   minutes: int
   targetURL: Uri
+  program: string = ""
+
+# === Functions to check for running program/process ===
+proc findProgram(): bool =
+  # Windows
+  when defined(windows):
+    let winFound = osproc.execProcess("tasklist").find(program) != -1
+    return winFound
+  # Linux
+  when defined(linux):
+    let linFound = osproc.execProcess("ps -A").find(program) != -1
+    return linFound
+  return false
+
+proc checkProgram(): bool =
+  if (program.len > 0) and not findProgram():
+    echo("Program ", program, " is not running.")
+    return false
+  if (program.len > 0) and findProgram():
+    echo("Program ", program, " is running.")
+  return true
+
+# === Ping the target URL ===
+proc pingURL() =
+  let client: HttpClient = newHttpClient()
+  let response: string = client.getContent(targetURL)
+  echo("Pinged: ", $targetURL, " ; Response length: ", response.len)
+  client.close()
 
 # === Timer loop, written partly with Copilot ===
 proc timerLoop*(interval: int = 1, callback: proc()) {.async.} =
@@ -29,14 +57,8 @@ proc timerLoop*(interval: int = 1, callback: proc()) {.async.} =
     let actualInterval = max(1, interval) # Ensure minimum 1 minute
     while true:
         await sleepAsync(actualInterval * 60 * 1000)
-        callback()
-
-# === Ping the target URL ===
-proc pingURL() =
-  let client: HttpClient = newHttpClient()
-  let response: string = client.getContent(targetURL)
-  echo("Pinged: ", $targetURL, " ; Response length: ", response.len)
-  client.close()
+        if checkProgram():
+          callback()
 
 # === Functions to display command line information ===
 proc writeVersion() =
@@ -64,6 +86,8 @@ for kind, key, val in getopt():
       else:
         echo("Invalid interval: ", val)
         quit(1)
+    of "program", "p":
+      program = val      
     of "help", "h":
       writeHelp()
       quit(0)
@@ -77,8 +101,11 @@ for kind, key, val in getopt():
 
 # === Main ===
 proc main() {.async.} =
-  echo("Pinging ", $targetURL, " every ", $minutes, " minutes...")
-  pingURL()
+  if checkProgram():
+    pingURL()
+  if program.len > 0:
+    echo("Pinging ", $targetURL, " every ", $minutes, " minutes, if ", program, " is running...")
+  else:
+    echo("Pinging ", $targetURL, " every ", $minutes, " minutes...")
   await timerLoop(minutes, pingURL)
-
 waitfor main()

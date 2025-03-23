@@ -1,3 +1,3 @@
 @echo off
-nimble build -d:release -d:ssl --gc:orc --opt:size --verbose
+nimble build -d:release -d:ssl --mm:orc --opt:size --verbose
 move pingh.exe bin\

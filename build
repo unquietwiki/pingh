@@ -1,1 +1,1 @@
-~/.nimble/bin/nimble build -d:release -d:ssl --gc:orc --opt:size --verbose
+~/.nimble/bin/nimble build -d:release -d:ssl --mm:orc --opt:size --verbose

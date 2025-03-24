@@ -1,0 +1,15 @@
+# On SELinux-enabled systems, may need to run the following, before activating this service.
+# chcon -t bin_t /usr/local/bin/pingh && restorecon /usr/local/bin/pingh
+
+[Unit]
+Description=Pingh - monitor APP and send a heartbeat
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pingh -m:1 -p:APP "https://example.org"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

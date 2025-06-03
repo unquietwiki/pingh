@@ -9,7 +9,7 @@ _pingh_ checks the system for specific conditions, and reports back to an HTTP e
 - Open TCP port check on localhost (works dual-stack): **pingh -m:2 -t:8080 "https://example.org"**
 - Open TCP port check on another host (slower, works dual-stack): **pingh -m:2 -s:"example.com" -t:443 "https://example.org"**
 
-**Other flags:** _--debug (-d), _--help (-h)_, _--version (-v)_
+**Other flags:** _--debug (-d)_, _--help (-h)_, _--version (-v)_
 
 ## Changelog
 
@@ -17,7 +17,3 @@ _pingh_ checks the system for specific conditions, and reports back to an HTTP e
 - 2025.03.22.2 -> Added test for open TCP socket & minor fixes.
 - 2025.03.22.1 -> Added test for running process.
 - 2025.03.21.1 -> Initial Release
-
-## TODO
-
-- Example systemd script for Linux use.

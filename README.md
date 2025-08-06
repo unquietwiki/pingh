@@ -11,6 +11,17 @@ _pingh_ checks the system for specific conditions, and reports back to an HTTP e
 
 **Other flags:** _--debug (-d)_, _--help (-h)_, _--version (-v)_
 
+## Running on Linux
+
+1. Edit the pingh.service file to the settings you wish to use.
+2. Copy the provided pingh.service file to **/etc/systemd/system/**
+3. **systemctl enable pingh.service && systemctl start pingh.service**
+
+## Running on Windows
+
+- Task Scheduler can work, but may not be stable. Modify the included XML file, and import to Task Scheduler to try this.
+- You may have better luck using [nssm](https://nssm.cc/); on a Windows 11 host, it can be installed via winget. "nssm install" -> provide it a name (ex: PINGH), the location of the EXE, the parameters, and a friendly service name (ex: Pingh Heartbeat Monitor). Then start it from the Services window.
+
 ## Changelog
 
 - 2025.06.02.2 -> Used Claude Sonnet 4 to validate code & rebuild check logic; added a "debug" option & made the output less verbose by default; ping URL check now has a 10 second timeout.

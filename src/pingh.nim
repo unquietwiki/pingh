@@ -4,7 +4,7 @@ Michael Adams, unquietwiki.com, 2025.11.18.1
 ]#
 
 # Libraries
-import std/[asyncdispatch, exitprocs, httpclient, net, os, osproc, parseopt, strutils, times, uri]
+import std/[asyncdispatch, asyncnet, exitprocs, httpclient, net, os, osproc, parseopt, strutils, uri]
 
 # Config import (it's just variables)
 include config
@@ -24,10 +24,10 @@ var
   port: int = 0
   server: string = "localhost"
   verbose: bool = false
-  httpClientLocal: HttpClient = nil
+  httpClientLocal: AsyncHttpClient = nil
 
 # === Functions to check for running program/process ===
-proc findProgram(): bool =
+proc findProgramAsync(): Future[bool] {.async.} =
   if program.len == 0:
     return true
   # Enhanced validation to prevent injection
@@ -37,7 +37,9 @@ proc findProgram(): bool =
   # Windows
   if defined(windows):
     try:
-      let output = osproc.execProcess("tasklist /fo csv /nh")
+      # Run in background to avoid blocking the async event loop
+      let cmd = "tasklist /fi \"imagename eq " & program & "\" /fo csv /nh"
+      let output = osproc.execProcess(cmd)
       for line in output.splitLines():
         if line.len > 0:
           let fields = line.split(',')
@@ -62,11 +64,11 @@ proc findProgram(): bool =
     echo("Unsupported operating system for program check.")
     return false
 
-proc checkProgram(): bool =
+proc checkProgramAsync(): Future[bool] {.async.} =
   if program.len == 0:
     return true
 
-  let running = findProgram()
+  let running = await findProgramAsync()
   if not running:
     echo("Program ", program, " is not running.")
     return false
@@ -76,15 +78,25 @@ proc checkProgram(): bool =
   return true
 
 # === Function to check if a TCP port is open ===
-proc checkTCPPort(): bool =
+proc checkTCPPortAsync(): Future[bool] {.async.} =
   if port == 0:
     return true
   try:
-    let sock = net.dial(server, Port(port))
-    sock.close()
-    if verbose:
-      echo("Port ", port, " is open on ", server, ".")
-    return true
+    let sock = newAsyncSocket()
+    # Set timeout of 5 seconds for connection attempt
+    let connected = await sock.connect(server, Port(port)).withTimeout(5000)
+    if connected:
+      sock.close()
+      if verbose:
+        echo("Port ", port, " is open on ", server, ".")
+      return true
+    else:
+      sock.close()
+      echo("Port ", port, " connection timeout on ", server, ".")
+      return false
+  except TimeoutError:
+    echo("Port ", port, " connection timeout on ", server, ".")
+    return false
   except:
     echo("Port ", port, " is closed on ", server, ".")
     return false
@@ -103,11 +115,12 @@ proc cleanup() {.noconv.} =
     echo("Cleanup completed.")
 
 # === Ping the target URL ===
-proc pingURL(): bool =
+proc pingURL(): Future[bool] {.async.} =
   try:
     if httpClientLocal.isNil:
-      httpClientLocal = newHttpClient(timeout = 10000)
-    let response: string = httpClientLocal.getContent(targetURL)
+      httpClientLocal = newAsyncHttpClient()
+      httpClientLocal.timeout = 10000
+    let response: string = await httpClientLocal.getContent($targetURL)
     if verbose:
       echo("Pinged: ", $targetURL, " ; Response length: ", response.len)
     return true
@@ -122,20 +135,23 @@ proc pingURL(): bool =
     return false
 
 # === Timer loop, written partly with Copilot ===
-proc timerLoop*(interval: int = 1, callback: proc()) {.async.} =
+proc timerLoop*(interval: int = 1, callback: proc(): Future[void]) {.async.} =
     ## Executes a callback function on a timer loop
     ## interval: time in minutes (minimum 1 minute)
-    ## callback: procedure to execute on each interval
+    ## callback: async procedure to execute on each interval
     let actualInterval = max(1, interval) # Ensure minimum 1 minute
     while true:
         await sleepAsync(actualInterval * 60 * 1000)
-        callback()
+        await callback()
 
 # === Function to call check functions (need for async timer) ===
-proc runChecks() =
-  let programOk = checkProgram()
-  let portOk = checkTCPPort()
-  let urlOk = pingURL()  
+proc runChecks(): Future[void] {.async.} =
+  # Run all three checks in parallel for better performance
+  let results = await all(checkProgramAsync(), checkTCPPortAsync(), pingURL())
+  let programOk = results[0]
+  let portOk = results[1]
+  let urlOk = results[2]
+
   if not programOk or not portOk or not urlOk:
     var failedChecks: seq[string] = @[]
     if not programOk: failedChecks.add("program")
@@ -221,7 +237,7 @@ proc main() {.async.} =
   if verbose:
     echo("Begin pingh main loop")
   echo("Pinging ", $targetURL, " every ", $minutes, " minutes...")
-  runChecks()  # Initial check before starting the timer
+  await runChecks()  # Initial check before starting the timer
   await timerLoop(minutes, runChecks) # Loop every 'minutes' minutes
 
 # === Start the program ===

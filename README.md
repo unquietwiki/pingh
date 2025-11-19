@@ -24,7 +24,7 @@ _pingh_ checks the system for specific conditions, and reports back to an HTTP e
 
 ## Changelog
 
-- 2025.11.18.1 -> Selective semi-automated fixes with Claude Code.
+- 2025.11.18.1 -> Selective semi-automated fixes with Claude Code; revamped build/package logic.
 - 2025.06.02.2 -> Used Claude Sonnet 4 to validate code & rebuild check logic; added a "debug" option & made the output less verbose by default; ping URL check now has a 10 second timeout.
 - 2025.03.22.2 -> Added test for open TCP socket & minor fixes.
 - 2025.03.22.1 -> Added test for running process.

@@ -1,1 +1,3 @@
-~/.nimble/bin/nimble build -d:release -d:ssl --mm:orc --opt:size --verbose
+#!/bin/bash
+~/.nimble/bin/nimble linux_x64_build
+mv pingh bin/

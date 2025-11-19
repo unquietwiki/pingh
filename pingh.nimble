@@ -25,8 +25,9 @@ installExt    = @["nim"]
 
 requires "nim >= 2.2.0"
 
-const compile = "nim c -d:release"
+const compile = "nim c -d:release -d:ssl --mm:orc --opt:size"
 const linux_x64 = "--cpu:amd64 --os:linux -o:pingh"
+const linux_arm64 = "--cpu:arm64 --os:linux -o:pingh"
 const windows_x64 = "--cpu:amd64 --os:windows -o:pingh.exe"
 const macosx_x64 = "-o:pingh"
 const program = "pingh"
@@ -44,21 +45,11 @@ task windows_x64_build, "Build pingh for Windows (x64)":
 
 task linux_x64_build, "Build pingh for Linux (x64)":
   shell compile, linux_x64,  program_file
-  
+
+task linux_arm64_build, "Build pingh for Linux (arm64)":
+  shell compile, linux_arm64,  program_file
+
 task macosx_x64_build, "Build pingh for Mac OS X (x64)":
   shell compile, macosx_x64, program_file
 
-task release, "Release pingh":
-  echo "\n\n\n WINDOWS - x64:\n\n"
-  windows_x64_buildTask()
-  shell zip, filename_for("windows", "x64"), program & ".exe"
-  shell "rm", program & ".exe"
-  echo "\n\n\n LINUX - x64:\n\n"
-  linux_x64_buildTask()
-  shell zip, filename_for("linux", "x64"), program 
-  shell "rm", program 
-  echo "\n\n\n MAC OS X - x64:\n\n"
-  macosx_x64_buildTask()
-  shell zip, filename_for("macosx", "x64"), program 
-  shell "rm", program 
-  echo "\n\n\n ALL DONE!"
+# TODO: figure out proper "release" logic

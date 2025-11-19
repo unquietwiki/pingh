@@ -1,10 +1,10 @@
 #[
 pingh: periodically return status of host as a HTTP response.
-Michael Adams, unquietwiki.com, 2025.06.02.2
+Michael Adams, unquietwiki.com, 2025.11.18.1
 ]#
 
 # Libraries
-import std/[asyncdispatch, httpclient, net, os, osproc, parseopt, strutils, times, uri]
+import std/[asyncdispatch, exitprocs, httpclient, net, os, osproc, parseopt, strutils, times, uri]
 
 # Config import (it's just variables)
 include config
@@ -24,6 +24,7 @@ var
   port: int = 0
   server: string = "localhost"
   verbose: bool = false
+  httpClientLocal: HttpClient = nil
 
 # === Functions to check for running program/process ===
 proc findProgram(): bool =
@@ -62,12 +63,16 @@ proc findProgram(): bool =
     return false
 
 proc checkProgram(): bool =
-  if (program.len > 0) and not findProgram():
+  if program.len == 0:
+    return true
+
+  let running = findProgram()
+  if not running:
     echo("Program ", program, " is not running.")
     return false
-  if (program.len > 0) and findProgram():
-    if verbose:
-      echo("Program ", program, " is running.")
+
+  if verbose:
+    echo("Program ", program, " is running.")
   return true
 
 # === Function to check if a TCP port is open ===
@@ -84,12 +89,25 @@ proc checkTCPPort(): bool =
     echo("Port ", port, " is closed on ", server, ".")
     return false
 
+# === Cleanup handler for graceful shutdown ===
+proc cleanup() {.noconv.} =
+  ## Cleanup handler called on program exit
+  if not httpClientLocal.isNil:
+    try:
+      httpClientLocal.close()
+      if verbose:
+        echo("HTTP client closed.")
+    except:
+      discard
+  if verbose:
+    echo("Cleanup completed.")
+
 # === Ping the target URL ===
 proc pingURL(): bool =
   try:
-    let client = newHttpClient(timeout = 10000)
-    let response: string = client.getContent(targetURL)
-    client.close()
+    if httpClientLocal.isNil:
+      httpClientLocal = newHttpClient(timeout = 10000)
+    let response: string = httpClientLocal.getContent(targetURL)
     if verbose:
       echo("Pinged: ", $targetURL, " ; Response length: ", response.len)
     return true
@@ -218,4 +236,7 @@ if verbose:
   echo("Program: ", program)
   echo("Port: ", port)
   echo("Server: ", server)
+
+addExitProc(cleanup) # Register cleanup handler
+
 waitfor main()
